@@ -111,13 +111,39 @@
          -movflags +faststart hero-section1-scrub.mp4
      Then point the <source> at the dense-keyframe file.
   */
-  // Prepare a video purely for scrubbing: loaded + paused, never autoplay/loop/play.
+  // Prepare a video purely for scrubbing: loaded + paused, never autoplay/loop.
   function prepScrubVideo(video) {
     video.loop = false;
     video.muted = true;
     video.autoplay = false;
     video.removeAttribute('autoplay');
     try { video.pause(); video.currentTime = 0; } catch (e) {}
+  }
+
+  // One-time, muted "prime": briefly play() then immediately pause() when the
+  // video approaches the viewport. This activates the decoder so that scrubbed
+  // currentTime seeks actually PAINT frames on every host (a large, off-screen
+  // second video often shows only its poster until it has been activated — which
+  // is why the hero scrubs but the middle video looked like a static image on the
+  // deployed site). It is NOT autoplay: it pauses on the same tick, runs once,
+  // and only scrubs on scroll thereafter.
+  function primeVideo(video) {
+    if (!('IntersectionObserver' in window)) return;
+    var primed = false;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && !primed) {
+          primed = true;
+          io.disconnect();
+          try {
+            var p = video.play();
+            if (p && p.then) p.then(function () { video.pause(); }).catch(function () {});
+            else video.pause();
+          } catch (err) {}
+        }
+      });
+    }, { rootMargin: '300% 0px' }); // prime well before it scrolls into view
+    io.observe(video);
   }
 
   // Create a pinned, scroll-scrubbed video section. progress 0 = start, 1 = end.
@@ -233,6 +259,9 @@
       });
       return;
     }
+
+    // Prime each video so seeked frames paint reliably on every host.
+    videos.forEach(primeVideo);
 
     const gsap = window.gsap;
     const ST = window.ScrollTrigger;

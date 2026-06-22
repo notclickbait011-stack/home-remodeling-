@@ -240,17 +240,12 @@ ul,ol{margin:0;padding:0;list-style:none;}
    video can still be scrubbed by scroll position. */
 .hero.is-fallback{height:500vh;}
 .hero.is-fallback .hero__viewport{position:sticky;}
-.hero__scene{
-  position:absolute;inset:0;overflow:hidden;will-change:transform;
-  /* Fallback image if the video never paints a frame */
-  background:var(--rich-black) url('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=2000&q=80') center/cover no-repeat;
-}
+.hero__scene{position:absolute;inset:0;overflow:hidden;will-change:transform;background:var(--rich-black);}
 .hero__video{
   position:absolute;inset:0;
   width:100%;height:100%;
   object-fit:cover;object-position:center;
   display:block;
-  background:transparent;
 }
 .hero__scrim{
   position:absolute;inset:0;
@@ -362,16 +357,10 @@ ul,ol{margin:0;padding:0;list-style:none;}
 .showcase.is-fallback{height:500vh;}
 .showcase.is-fallback .showcase__viewport{position:sticky;}
 
-.showcase__scene{
-  position:absolute;inset:0;overflow:hidden;
-  /* Fallback image: if the video never paints a frame (slow host, decode/seek
-     quirk, etc.) the section still shows a real photo instead of black. */
-  background:var(--rich-black) url('https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=80') center/cover no-repeat;
-}
+.showcase__scene{position:absolute;inset:0;overflow:hidden;background:var(--rich-black);}
 .showcase__video{
   position:absolute;inset:0;width:100%;height:100%;
   object-fit:cover;object-position:center;display:block;
-  background:transparent; /* let the scene fallback show through if no frame */
 }
 .showcase__scrim{
   position:absolute;inset:0;
