@@ -192,9 +192,10 @@
             class="showcase__video"
             id="middleVideo"
             muted playsinline preload="auto"
-            poster="https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=2000&q=80"
           >
-            <!-- Dense-keyframe re-encode for smooth scroll seeking -->
+            <!-- Dense-keyframe re-encode for smooth scroll seeking. No poster:
+                 a poster would sit on the video until a frame paints and can get
+                 "stuck" showing a stock photo on some hosts. -->
             <source src="./public/middlesection1-scrub.mp4" type="video/mp4" />
           </video>
           <div class="showcase__scrim"></div>

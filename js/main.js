@@ -120,30 +120,33 @@
     try { video.pause(); video.currentTime = 0; } catch (e) {}
   }
 
-  // One-time, muted "prime": briefly play() then immediately pause() when the
-  // video approaches the viewport. This activates the decoder so that scrubbed
-  // currentTime seeks actually PAINT frames on every host (a large, off-screen
-  // second video often shows only its poster until it has been activated — which
-  // is why the hero scrubs but the middle video looked like a static image on the
-  // deployed site). It is NOT autoplay: it pauses on the same tick, runs once,
-  // and only scrubs on scroll thereafter.
+  // One-time, muted "prime": as soon as the video can play, briefly play() then
+  // immediately pause(). This activates the decoder so that scrubbed currentTime
+  // seeks actually PAINT frames on every host (a large second video often shows
+  // only its first state until it has been activated — which is why the hero
+  // scrubbed but the middle video looked like a static image on the deployed
+  // site). It is NOT autoplay: it pauses on the same tick and only scrubs on
+  // scroll thereafter.
   function primeVideo(video) {
-    if (!('IntersectionObserver' in window)) return;
     var primed = false;
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (e.isIntersecting && !primed) {
-          primed = true;
-          io.disconnect();
-          try {
-            var p = video.play();
-            if (p && p.then) p.then(function () { video.pause(); }).catch(function () {});
-            else video.pause();
-          } catch (err) {}
-        }
-      });
-    }, { rootMargin: '300% 0px' }); // prime well before it scrolls into view
-    io.observe(video);
+    var doPrime = function () {
+      if (primed) return;
+      primed = true;
+      try {
+        var p = video.play();
+        if (p && p.then) p.then(function () { video.pause(); }).catch(function () { try { video.pause(); } catch (e) {} });
+        else video.pause();
+      } catch (err) {}
+      console.log('[' + (video.id || 'video') + '] primed (decoder activated)');
+    };
+    // Prime the moment there's enough data to render a frame, regardless of scroll.
+    if (video.readyState >= 2) doPrime();
+    else {
+      video.addEventListener('canplay', doPrime, { once: true });
+      video.addEventListener('loadeddata', doPrime, { once: true });
+    }
+    // Belt-and-suspenders: also kick off loading immediately.
+    try { video.load(); } catch (e) {}
   }
 
   // Create a pinned, scroll-scrubbed video section. progress 0 = start, 1 = end.
