@@ -125,28 +125,50 @@
   function createScrubVideo(opts) {
     const ST = window.ScrollTrigger;
     const video = opts.video;
-    const setup = () => {
-      ST.create({
-        trigger: opts.section,
-        start: 'top top',
-        end: opts.end || '+=500%',
-        pin: true,
-        pinSpacing: true,
-        scrub: true,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          if (opts.onProgress) opts.onProgress(self.progress);
-          if (!video.duration) return;
-          video.currentTime = self.progress * video.duration; // direct, continuous mapping
-        },
-      });
-      ST.refresh();
-    };
-    // Item 2: bind the timeline only AFTER metadata is known, so video.duration
-    // is never NaN. (onUpdate also guards `if (!video.duration) return`.)
-    if (video.readyState >= 1) setup();
-    else video.addEventListener('loadedmetadata', setup, { once: true });
-    // When the video's data actually arrives over the network, recompute pin bounds.
+    const label = (opts.section && opts.section.id) || 'video';
+    const srcEl = video.querySelector('source');
+
+    // ---- Debug logs (compare [hero] vs [showcase] in the console) ----
+    console.log('[' + label + '] video element found:', !!video, '#' + video.id);
+    console.log('[' + label + '] video src:', (srcEl && srcEl.getAttribute('src')) || video.currentSrc || '(none)');
+    video.addEventListener('loadedmetadata', function () {
+      console.log('[' + label + '] loadedmetadata — duration =', video.duration, 's');
+    });
+    video.addEventListener('loadeddata', function () {
+      console.log('[' + label + '] loadeddata (first frame available)');
+    });
+    video.addEventListener('error', function () {
+      console.error('[' + label + '] VIDEO ERROR — code', video.error && video.error.code, video.error && video.error.message);
+    });
+    if (srcEl) srcEl.addEventListener('error', function () {
+      console.error('[' + label + '] SOURCE FAILED TO LOAD:', srcEl.src);
+    });
+
+    // Create the pin SYNCHRONOUSLY and in document order (hero before showcase via
+    // refreshPriority). The pin does NOT need the video loaded — onUpdate guards
+    // `if (!video.duration) return`, so durations are never NaN. Building both pins
+    // up-front (instead of waiting on each video's metadata) is what keeps the pin
+    // spacing correct: otherwise the showcase can get measured before the hero's
+    // pin spacer exists and the two pinned sections overlap.
+    ST.create({
+      trigger: opts.section,
+      start: 'top top',
+      end: opts.end || '+=500%',
+      pin: true,
+      pinSpacing: true,
+      scrub: true,
+      invalidateOnRefresh: true,
+      refreshPriority: opts.refreshPriority || 0, // higher = measured first
+      onUpdate: (self) => {
+        if (opts.onProgress) opts.onProgress(self.progress);
+        if (!video.duration) return; // NaN-safe (e.g. video not loaded yet / failed)
+        video.currentTime = self.progress * video.duration; // direct, continuous mapping
+      },
+    });
+    console.log('[' + label + '] ScrollTrigger created (pinned scrub)');
+
+    // Recompute bounds once the video data arrives (a missing/slow video can never
+    // break layout — the pin already exists and the scene shows its fallback image).
     video.addEventListener('loadeddata', function () {
       try { ST.refresh(); } catch (e) {}
     }, { once: true });
@@ -217,14 +239,18 @@
 
     if (gsap && ST) {
       gsap.registerPlugin(ST);
+      // Create pins in document order with refreshPriority so the hero (higher on
+      // the page) is always measured BEFORE the showcase — this prevents the two
+      // pinned sections from overlapping.
       if (hero && heroVideo) {
-        createScrubVideo({ section: hero, video: heroVideo, end: '+=500%', onProgress: heroFade });
+        createScrubVideo({ section: hero, video: heroVideo, end: '+=500%', onProgress: heroFade, refreshPriority: 2 });
       }
       if (showcase && middleVideo) {
-        createScrubVideo({ section: showcase, video: middleVideo, end: '+=500%' });
+        createScrubVideo({ section: showcase, video: middleVideo, end: '+=500%', refreshPriority: 1 });
       }
-      // Item 1: after the network finishes loading videos/images, force a
-      // delayed recalculation so pin spacing is correct on slow hosts (GitHub Pages).
+      // Recalculate once everything (fonts, videos) is loaded — pin spacing is then
+      // correct even on slow hosts (GitHub Pages).
+      ST.refresh();
       window.addEventListener('load', () => setTimeout(() => ST.refresh(), 200));
     } else {
       if (hero && heroVideo) fallbackScrubVideo({ section: hero, video: heroVideo, onProgress: heroFade });
