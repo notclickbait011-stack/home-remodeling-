@@ -357,13 +357,16 @@ ul,ol{margin:0;padding:0;list-style:none;}
 .showcase.is-fallback{height:500vh;}
 .showcase.is-fallback .showcase__viewport{position:sticky;}
 
-.showcase__scene{position:absolute;inset:0;overflow:hidden;background:var(--rich-black);}
+/* The scene (which holds the video) sits ABOVE the text content; the video sits
+   above the scrim — so the middle video is the top visual layer in the section,
+   while the section still pins/scrubs on scroll. */
+.showcase__scene{position:absolute;inset:0;overflow:hidden;background:var(--rich-black);z-index:4;}
 .showcase__video{
   position:absolute;inset:0;width:100%;height:100%;
-  object-fit:cover;object-position:center;display:block;
+  object-fit:cover;object-position:center;display:block;z-index:2;
 }
 .showcase__scrim{
-  position:absolute;inset:0;
+  position:absolute;inset:0;z-index:1;
   background:
     linear-gradient(90deg, rgba(10,10,10,.86) 0%, rgba(10,10,10,.55) 36%, rgba(10,10,10,.12) 68%, rgba(10,10,10,.3) 100%),
     linear-gradient(180deg, rgba(10,10,10,.32) 0%, rgba(10,10,10,0) 30%, rgba(10,10,10,.4) 100%);
